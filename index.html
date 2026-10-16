@@ -45,7 +45,7 @@
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useMemo } = React;
+        const { useState, useMemo, useEffect } = React;
 
         const Icon = ({ path, size = 18, className = "" }) => (
             <svg 
@@ -67,7 +67,6 @@
         const UsersIcon = (props) => <Icon {...props} path={<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>} />;
         const ClockIcon = (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 16 14"/></>} />;
         const TrendingUpIcon = (props) => <Icon {...props} path={<><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></>} />;
-        const CheckSquareIcon = (props) => <Icon {...props} path={<><polyline points="9 11 12 14 22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></>} />;
         const RefreshCwIcon = (props) => <Icon {...props} path={<><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></>} />;
         const FilterIcon = (props) => <Icon {...props} path={<><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></>} />;
         const ZapIcon = (props) => <Icon {...props} path={<><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></>} />;
@@ -163,7 +162,6 @@
 
             return (
                 <div className="w-full h-full flex flex-col justify-between pt-6 pb-2 px-2 relative">
-                    {/* SVG Line Overlay for Minutes per Invoice */}
                     <div className="absolute inset-x-8 top-10 bottom-10 pointer-events-none z-10">
                         <svg className="w-full h-full overflow-visible">
                             <polyline
@@ -192,20 +190,17 @@
                         </svg>
                     </div>
 
-                    {/* Bar Chart Container for Document Volume */}
                     <div className="w-full h-40 flex items-end justify-between gap-2 px-4">
                         {data.map((item, idx) => {
                             const heightPct = Math.round((item[volKey] / maxVol) * 80);
                             return (
                                 <div key={idx} className="flex-1 flex flex-col items-center h-full justify-end group relative z-0">
-                                    {/* Tooltip */}
                                     <div className="absolute -top-12 opacity-0 group-hover:opacity-100 bg-slate-800 text-slate-100 text-[10px] p-2 rounded shadow-xl border border-slate-700 z-20 whitespace-nowrap transition-all pointer-events-none">
                                         <p className="font-bold text-amber-400">{item.period}</p>
                                         <p>{barLabel}: <span className="font-semibold text-slate-200">{item[volKey]} doc</span></p>
                                         <p>Avg Time: <span className="font-semibold text-emerald-400">{item[minKey]} min/doc</span></p>
                                         {activeFilterName !== 'ALL' && <p className="text-[9px] text-slate-400 italic mt-0.5">*Filter active: {activeFilterName}</p>}
                                     </div>
-                                    {/* Bar Element */}
                                     <div 
                                         className={`w-full max-w-[32px] ${barColor} rounded-t-md transition-all duration-300 group-hover:brightness-125 flex items-top justify-center pt-1`}
                                         style={{ height: `${Math.max(heightPct, 10)}%` }}
@@ -222,44 +217,57 @@
         };
 
         function App() {
-            // Rentang Tanggal (Date Range Filter)
             const [parkStartDate, setParkStartDate] = useState('2026-10-01');
             const [parkEndDate, setParkEndDate] = useState('2026-10-16');
 
             const [postStartDate, setPostStartDate] = useState('2026-10-01');
             const [postEndDate, setPostEndDate] = useState('2026-10-16');
 
-            // PIC & SPV Filter
             const [selectedParkPic, setSelectedParkPic] = useState('ALL');
             const [selectedPostSpv, setSelectedPostSpv] = useState('ALL');
 
-            // Timeframe Trend per Section
             const [parkTimeFrame, setParkTimeFrame] = useState('daily');
             const [postTimeFrame, setPostTimeFrame] = useState('daily');
 
-            const [lastUpdated] = useState('16 Okt 2026, 10:13 WIB');
+            const [lastUpdated, setLastUpdated] = useState('16 Okt 2026, 10:13 WIB');
+            const [parkData, setParkData] = useState(initialParkData);
+            const [postData, setPostData] = useState(initialPostData);
 
-            // Filter Parked Data berdasar rentang tanggal & selectedParkPic
+            // Dynamic fetch attempt for /data/ap_metrics.json
+            useEffect(() => {
+                fetch('/data/ap_metrics.json')
+                    .then(res => {
+                        if (res.ok) return res.json();
+                        throw new Error('JSON file not found, using fallback data.');
+                    })
+                    .then(json => {
+                        if (json.parkData) setParkData(json.parkData);
+                        if (json.postData) setPostData(json.postData);
+                        if (json.lastUpdated) setLastUpdated(json.lastUpdated);
+                    })
+                    .catch(err => {
+                        console.log('Info:', err.message);
+                    });
+            }, []);
+
             const filteredParkData = useMemo(() => {
-                let list = initialParkData.filter(d => d.date >= parkStartDate && d.date <= parkEndDate);
-                if (list.length === 0) list = initialParkData; // Fallback jika tidak ditemukan
+                let list = parkData.filter(d => d.date >= parkStartDate && d.date <= parkEndDate);
+                if (list.length === 0) list = parkData;
                 if (selectedParkPic !== 'ALL') {
                     list = list.filter(p => p.id === selectedParkPic);
                 }
                 return list;
-            }, [parkStartDate, parkEndDate, selectedParkPic]);
+            }, [parkStartDate, parkEndDate, selectedParkPic, parkData]);
 
-            // Filter Posted Data berdasar rentang tanggal & selectedPostSpv
             const filteredPostData = useMemo(() => {
-                let list = initialPostData.filter(d => d.date >= postStartDate && d.date <= postEndDate);
-                if (list.length === 0) list = initialPostData; // Fallback jika tidak ditemukan
+                let list = postData.filter(d => d.date >= postStartDate && d.date <= postEndDate);
+                if (list.length === 0) list = postData;
                 if (selectedPostSpv !== 'ALL') {
                     list = list.filter(p => p.id === selectedPostSpv);
                 }
                 return list;
-            }, [postStartDate, postEndDate, selectedPostSpv]);
+            }, [postStartDate, postEndDate, selectedPostSpv, postData]);
 
-            // Aggregated Vendor Breakdown for Parked
             const parkVendorList = useMemo(() => {
                 const map = {};
                 filteredParkData.forEach(pic => {
@@ -284,7 +292,6 @@
                 });
             }, [filteredParkData]);
 
-            // Aggregated Vendor Breakdown for Posted
             const postVendorList = useMemo(() => {
                 const map = {};
                 filteredPostData.forEach(spv => {
@@ -311,7 +318,6 @@
 
             return (
                 <div className="min-h-screen bg-[#0b1210] text-slate-100 flex flex-col font-sans">
-                    {/* Header */}
                     <header className="border-b border-sunpride-border bg-[#111c19]/90 backdrop-blur sticky top-0 z-50 px-4 sm:px-6 lg:px-8 py-3">
                         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
                             <div className="flex items-center space-x-3">
@@ -335,15 +341,11 @@
                         </div>
                     </header>
 
-                    {/* Main Container */}
                     <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
-
-                        {}
-                        {/* SECTION 1: PARKED (Kuning Sunpride Accent) */}
+                        {/* SECTION 1: PARKED STAFF */}
                         <section className="bg-[#141f1c] border border-amber-500/40 rounded-2xl p-6 shadow-xl relative overflow-hidden space-y-6">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-bl-full pointer-events-none"></div>
 
-                            {/* Section Header & Filters */}
                             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-sunpride-border">
                                 <div>
                                     <div className="flex items-center space-x-2">
@@ -355,9 +357,7 @@
                                     <h2 className="text-lg font-bold text-amber-300 mt-1">Kinerja Parked per Invoice, Vendor Impact & Analisis Tren</h2>
                                 </div>
 
-                                {/* Filters untuk Park: Date Range & PIC */}
                                 <div className="flex flex-wrap items-center gap-3">
-                                    {/* Rentang Tanggal Filter Parked */}
                                     <div className="flex items-center space-x-1.5 bg-[#0b1210] px-3 py-1.5 rounded-xl border border-amber-500/30 text-xs">
                                         <CalendarIcon size={14} className="text-amber-400 shrink-0" />
                                         <span className="font-semibold text-slate-400">Tgl:</span>
@@ -376,7 +376,6 @@
                                         />
                                     </div>
 
-                                    {/* PIC Filter Parked */}
                                     <div className="flex items-center space-x-2 bg-[#0b1210] p-1.5 px-3 rounded-xl border border-amber-500/30">
                                         <FilterIcon size={14} className="text-amber-400 shrink-0" />
                                         <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">PIC:</span>
@@ -394,10 +393,7 @@
                                 </div>
                             </div>
 
-                            {/* Grid Performance Staff Parked & Breakdown Vendor */}
                             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                                
-                                {/* Tabel Performance Staff */}
                                 <div className="lg:col-span-7 bg-[#0b1210]/80 border border-sunpride-border rounded-xl p-4">
                                     <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center justify-between">
                                         <span>Matrix Staff Parked ({filteredParkData.length} Staff Ditemukan)</span>
@@ -454,7 +450,6 @@
                                     </div>
                                 </div>
 
-                                {/* Vendor Analysis for Parked */}
                                 <div className="lg:col-span-5 bg-[#0b1210]/80 border border-sunpride-border rounded-xl p-4 flex flex-col justify-between">
                                     <div>
                                         <div className="flex items-center justify-between mb-3">
@@ -489,10 +484,8 @@
                                         *Vendor berlabel merah melebihi SLA Parked 1 Hari dan memicu perlambatan performance.
                                     </p>
                                 </div>
-
                             </div>
 
-                            {/* Sub-Section Chart Tren Parked Staff */}
                             <div className="bg-[#0b1210]/90 border border-amber-500/20 rounded-xl p-4 space-y-3">
                                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-sunpride-border pb-3">
                                     <div className="flex items-center space-x-2">
@@ -532,12 +525,10 @@
                             </div>
                         </section>
 
-                        {}
-                        {/* SECTION 2: POSTED (Hijau Sunpride Accent) */}
+                        {/* SECTION 2: POSTED SPV */}
                         <section className="bg-[#141f1c] border border-emerald-500/40 rounded-2xl p-6 shadow-xl relative overflow-hidden space-y-6">
                             <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-bl-full pointer-events-none"></div>
 
-                            {/* Section Header & Filters */}
                             <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-sunpride-border">
                                 <div>
                                     <div className="flex items-center space-x-2">
@@ -549,9 +540,7 @@
                                     <h2 className="text-lg font-bold text-emerald-300 mt-1">Kinerja Posting Supervisor, Vendor Impact & Analisis Tren</h2>
                                 </div>
 
-                                {/* Filters untuk Post: Date Range & SPV */}
                                 <div className="flex flex-wrap items-center gap-3">
-                                    {/* Rentang Tanggal Filter Posted */}
                                     <div className="flex items-center space-x-1.5 bg-[#0b1210] px-3 py-1.5 rounded-xl border border-emerald-500/30 text-xs">
                                         <CalendarIcon size={14} className="text-emerald-400 shrink-0" />
                                         <span className="font-semibold text-slate-400">Tgl:</span>
@@ -570,7 +559,6 @@
                                         />
                                     </div>
 
-                                    {/* SPV Filter Posted */}
                                     <div className="flex items-center space-x-2 bg-[#0b1210] p-1.5 px-3 rounded-xl border border-emerald-500/30">
                                         <FilterIcon size={14} className="text-emerald-400 shrink-0" />
                                         <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">SPV:</span>
@@ -588,10 +576,7 @@
                                 </div>
                             </div>
 
-                            {/* Grid Performance SPV Posted & Breakdown Vendor */}
                             <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                                
-                                {/* Tabel Performance SPV */}
                                 <div className="lg:col-span-7 bg-[#0b1210]/80 border border-sunpride-border rounded-xl p-4">
                                     <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center justify-between">
                                         <span>Matrix Supervisor Posted ({filteredPostData.length} SPV Ditemukan)</span>
@@ -648,7 +633,6 @@
                                     </div>
                                 </div>
 
-                                {/* Vendor Analysis for Posted */}
                                 <div className="lg:col-span-5 bg-[#0b1210]/80 border border-sunpride-border rounded-xl p-4 flex flex-col justify-between">
                                     <div>
                                         <div className="flex items-center justify-between mb-3">
@@ -683,10 +667,8 @@
                                         *Vendor berlabel merah melebihi SLA Posted 3 Hari dan butuh eskalasi SPV.
                                     </p>
                                 </div>
-
                             </div>
 
-                            {/* Sub-Section Chart Tren Posted SPV */}
                             <div className="bg-[#0b1210]/90 border border-emerald-500/20 rounded-xl p-4 space-y-3">
                                 <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 border-b border-sunpride-border pb-3">
                                     <div className="flex items-center space-x-2">
@@ -725,10 +707,8 @@
                                 </div>
                             </div>
                         </section>
-
                     </main>
 
-                    {/* Footer */}
                     <footer className="border-t border-sunpride-border py-4 bg-[#111c19] text-center text-xs text-slate-500">
                         <p>© 2026 PT Sewu Segar Nusantara (Sunpride) • SAP AP Analytics Dashboard</p>
                     </footer>
