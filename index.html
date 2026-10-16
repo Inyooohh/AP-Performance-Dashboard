@@ -74,26 +74,18 @@
         const AlertCircleIcon = (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>} />;
         const TruckIcon = (props) => <Icon {...props} path={<><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></>} />;
 
-        // Fallback Initial Data (If JSON isn't available)
+        // Fallback Initial Data
         const initialParkData = [
-            { id: 'STAFF-01', name: 'Budi Santoso', date: '2026-10-16', parkedDocs: 42, avgMinutes: 18.5, slaDaysAvg: 0.8, complianceRate: '96.2%', 
+            { id: 'STAFF-01', name: 'Valen', date: '2026-10-16', parkedDocs: 142, avgMinutes: 12.5, slaDaysAvg: 0.8, complianceRate: '96.2%', 
               vendors: [
-                { name: 'PT Logistics Jaya Abadi', docCount: 18, avgMin: 22.1, slaDays: 1.2, isOverSla: true },
-                { name: 'CV Sumber Makmur Tehnik', docCount: 14, avgMin: 14.5, slaDays: 0.6, isOverSla: false },
-                { name: 'PT Global Technology Indonesia', docCount: 10, avgMin: 19.0, slaDays: 0.7, isOverSla: false }
+                { name: 'Great Giant Pineapple Co.', docCount: 45, avgMin: 14.2, slaDays: 0.7, isOverSla: false },
+                { name: 'Lavilla Kreatif Perkasa', docCount: 38, avgMin: 11.5, slaDays: 0.5, isOverSla: false }
               ] 
             },
-            { id: 'STAFF-02', name: 'Siti Rahmawati', date: '2026-10-16', parkedDocs: 58, avgMinutes: 24.2, slaDaysAvg: 1.3, complianceRate: '88.5%', 
+            { id: 'STAFF-02', name: 'Ino', date: '2026-10-16', parkedDocs: 58, avgMinutes: 18.2, slaDaysAvg: 1.2, complianceRate: '88.5%', 
               vendors: [
-                { name: 'PT Petrochemical Industrial', docCount: 26, avgMin: 28.5, slaDays: 1.5, isOverSla: true },
-                { name: 'PT Nusantara Energy Pratama', docCount: 20, avgMin: 21.0, slaDays: 1.1, isOverSla: true },
-                { name: 'CV Anugerah Paper & Stationeries', docCount: 12, avgMin: 12.0, slaDays: 0.4, isOverSla: false }
-              ] 
-            },
-            { id: 'STAFF-03', name: 'Ahmad Fauzi', date: '2026-10-16', parkedDocs: 35, avgMinutes: 13.8, slaDaysAvg: 0.5, complianceRate: '98.0%', 
-              vendors: [
-                { name: 'CV Anugerah Paper & Stationeries', docCount: 20, avgMin: 11.2, slaDays: 0.4, isOverSla: false },
-                { name: 'PT Mitra Utama Sejahtera', docCount: 15, avgMin: 16.0, slaDays: 0.6, isOverSla: false }
+                { name: 'Nusantara Segar Abadi (Blitar)', docCount: 26, avgMin: 20.5, slaDays: 1.3, isOverSla: true },
+                { name: 'Gelatik Supra', docCount: 20, avgMin: 16.0, slaDays: 0.9, isOverSla: false }
               ] 
             }
         ];
@@ -101,16 +93,14 @@
         const initialPostData = [
             { id: 'SPV-01', name: 'Dewi Lestari', date: '2026-10-16', postedDocs: 115, avgMinutes: 12.4, slaDaysAvg: 1.8, complianceRate: '98.5%', 
               vendors: [
-                { name: 'PT Global Technology Indonesia', docCount: 45, avgMin: 14.2, slaDays: 2.1, isOverSla: false },
-                { name: 'PT Logistics Jaya Abadi', docCount: 40, avgMin: 11.0, slaDays: 1.5, isOverSla: false },
-                { name: 'PT Petrochemical Industrial', docCount: 30, avgMin: 12.0, slaDays: 1.9, isOverSla: false }
+                { name: 'Great Giant Pineapple Co.', docCount: 45, avgMin: 14.2, slaDays: 2.1, isOverSla: false },
+                { name: 'Lavilla Kreatif Perkasa', docCount: 40, avgMin: 11.0, slaDays: 1.5, isOverSla: false }
               ] 
             },
             { id: 'SPV-02', name: 'Rian Pratama', date: '2026-10-16', postedDocs: 92, avgMinutes: 32.1, slaDaysAvg: 3.4, complianceRate: '82.0%', 
               vendors: [
-                { name: 'PT Nusantara Energy Pratama', docCount: 42, avgMin: 36.5, slaDays: 3.8, isOverSla: true },
-                { name: 'CV Sumber Makmur Tehnik', docCount: 30, avgMin: 28.0, slaDays: 3.1, isOverSla: true },
-                { name: 'PT Solusi Bangun Indonesia', docCount: 20, avgMin: 29.5, slaDays: 2.9, isOverSla: false }
+                { name: 'Riyozha Telekomunikasi Indonesia', docCount: 42, avgMin: 36.5, slaDays: 3.8, isOverSla: true },
+                { name: 'Marc Tri Manunggal', docCount: 30, avgMin: 28.0, slaDays: 3.1, isOverSla: true }
               ] 
             }
         ];
@@ -223,17 +213,26 @@
             const [parkData, setParkData] = useState(initialParkData);
             const [postData, setPostData] = useState(initialPostData);
 
-            // Dynamic Normalizer function for Power Automate JSON Output
+            // Robust Normalizer for Power Automate JSON (Cleans keys with newlines / spaces)
             const normalizePowerAutomateData = (json) => {
-                let parsedPark = [];
-                let parsedPost = [];
+                const cleanObj = (obj) => {
+                    if (!obj || typeof obj !== 'object') return {};
+                    const cleaned = {};
+                    Object.keys(obj).forEach(k => {
+                        const cleanKey = k.trim().replace(/\r?\n|\r/g, '');
+                        cleaned[cleanKey] = obj[k];
+                    });
+                    return cleaned;
+                };
 
-                // 1. Check if json has 'Table Parked' or 'parkData' or direct array
-                const rawPark = json['Table Parked'] || json['TableParked'] || json.parkData || json.parked || (Array.isArray(json) ? json : []);
-                const rawPost = json['Table Posted'] || json['TablePosted'] || json.postData || json.posted || (Array.isArray(json) ? json : []);
-                const rawDetail = json['Table Detail Entry'] || json['TableDetailEntry'] || json.detailData || json.details || [];
+                let rawPark = json['Table Parked'] || json['TableParked'] || json.table_parked || json.parkData || json.parked || [];
+                let rawPost = json['Table Posted'] || json['TablePosted'] || json.table_posted || json.postData || json.posted || [];
+                let rawDetail = json['Table Detail Entry'] || json['TableDetailEntry'] || json.detail_entry || json.detailData || json.details || [];
 
-                // Helper to parse numerical values SAFELY
+                rawPark = Array.isArray(rawPark) ? rawPark.map(cleanObj) : [];
+                rawPost = Array.isArray(rawPost) ? rawPost.map(cleanObj) : [];
+                rawDetail = Array.isArray(rawDetail) ? rawDetail.map(cleanObj) : [];
+
                 const parseNum = (val) => {
                     if (val === undefined || val === null || val === '') return 0;
                     if (typeof val === 'number') return val;
@@ -241,102 +240,103 @@
                     return parseFloat(cleaned) || 0;
                 };
 
-                // Normalize Parked Rows
-                if (Array.isArray(rawPark) && rawPark.length > 0) {
-                    parsedPark = rawPark.map((item, idx) => {
-                        const name = item.pic_parked || item.name || item.PIC_Parked || `Staff ${idx+1}`;
-                        const date = item.date_of_parking || item.date || item.Date_Of_Parking || '2026-10-16';
-                        const parkedDocs = parseNum(item.count_of_document_number_parked || item.parkedDocs || item.Count_Of_Document_Number_Parked || 0);
-                        const avgMinutes = parseNum(item.minutes_for_parked_per_invoice || item.duration_parked_minutes || item.avgMinutes || 0);
-                        const slaDaysAvg = parseNum(item.sla_pic_parked || item.slaDaysAvg || 0.8);
-
-                        // Attach or extract vendors if available in detail
-                        let vendors = item.vendors || [];
-                        if (vendors.length === 0 && rawDetail.length > 0) {
-                            vendors = rawDetail.map(d => ({
-                                name: d.vendor_name || d.Vendor_Name || 'Vendor SAP',
-                                docCount: parseNum(d.transaction || 1),
-                                avgMin: parseNum(d.sla_pic_parked || avgMinutes),
-                                slaDays: parseNum(d.sla_pic_parked || 0.8),
-                                isOverSla: parseNum(d.sla_pic_parked || 0.8) > 1.0
-                            }));
-                        }
-
-                        return {
-                            id: item.id || `PARK-${idx+1}`,
+                // Group table_parked by PIC
+                const picMap = {};
+                rawPark.forEach((item, idx) => {
+                    const name = item.pic_parked || item.name || item.PIC_Parked || `Staff ${idx+1}`;
+                    if (!picMap[name]) {
+                        picMap[name] = {
+                            id: `PARK-0${Object.keys(picMap).length + 1}`,
                             name,
-                            date,
-                            parkedDocs,
-                            avgMinutes,
-                            slaDaysAvg,
-                            complianceRate: item.complianceRate || '95.0%',
-                            vendors: vendors.length > 0 ? vendors : [
-                                { name: 'PT SAP Logistics Direct', docCount: parkedDocs, avgMin: avgMinutes, slaDays: slaDaysAvg, isOverSla: slaDaysAvg > 1.0 }
-                            ]
+                            date: '2026-10-16',
+                            parkedDocs: 0,
+                            totalMin: 0,
+                            totalSlaDays: 0,
+                            countEntries: 0
                         };
+                    }
+                    const docs = parseNum(item.count_of_document_number_parked || 1);
+                    const avgMin = parseNum(item.minutes_for_parked_per_invoice || 0);
+                    
+                    picMap[name].parkedDocs += docs;
+                    picMap[name].totalMin += (avgMin * docs);
+                    picMap[name].countEntries += 1;
+                });
+
+                // Convert grouped PIC to array
+                let parsedPark = Object.values(picMap).map(p => {
+                    const avgMinutes = p.parkedDocs > 0 ? (p.totalMin / p.parkedDocs).toFixed(1) : 0;
+                    const slaDaysAvg = (avgMinutes / (8 * 60)).toFixed(1); // approximate 8 hours working day
+                    return {
+                        id: p.id,
+                        name: p.name,
+                        date: p.date,
+                        parkedDocs: p.parkedDocs,
+                        avgMinutes: parseFloat(avgMinutes),
+                        slaDaysAvg: Math.max(parseFloat(slaDaysAvg), 0.5),
+                        complianceRate: '95.0%',
+                        vendors: []
+                    };
+                });
+
+                // Extract vendors from detail_entry
+                const vendorList = rawDetail.map(d => ({
+                    name: d.vendor_name || 'Vendor SAP',
+                    docCount: 1,
+                    avgMin: parseNum(d.sla_pic_parked) * 15,
+                    slaDays: parseNum(d.sla_pic_parked),
+                    isOverSla: parseNum(d.sla_pic_parked) > 1.0
+                }));
+
+                if (parsedPark.length === 0) parsedPark = initialParkData;
+                else {
+                    parsedPark.forEach(p => {
+                        p.vendors = vendorList.slice(0, 5); // assign top vendors
                     });
                 }
 
-                // Normalize Posted Rows
-                if (Array.isArray(rawPost) && rawPost.length > 0) {
-                    parsedPost = rawPost.map((item, idx) => {
-                        const name = item.pic_post || item.name || item.PIC_Post || `Supervisor ${idx+1}`;
-                        const date = item.entry_date || item.date || item.Entry_Date || '2026-10-16';
-                        const postedDocs = parseNum(item.count_of_document_number_posted || item.postedDocs || item.Count_Of_Document_Number_Posted || 0);
-                        const avgMinutes = parseNum(item.minutes_for_posted_per_invoice || item.duration_posting_minutes || item.avgMinutes || 0);
-                        const slaDaysAvg = parseNum(item.sla_full_process || item.slaDaysAvg || 2.1);
+                // Parse posted data
+                let parsedPost = rawPost.map((item, idx) => ({
+                    id: `POST-0${idx+1}`,
+                    name: item.pic_post || item.name || `Supervisor ${idx+1}`,
+                    date: '2026-10-16',
+                    postedDocs: parseNum(item.count_of_document_number_posted || 45),
+                    avgMinutes: parseNum(item.minutes_for_posted_per_invoice || 22.4),
+                    slaDaysAvg: parseNum(item.sla_full_process || 2.1),
+                    complianceRate: '92.0%',
+                    vendors: vendorList.slice(0, 4)
+                }));
 
-                        let vendors = item.vendors || [];
-                        if (vendors.length === 0 && rawDetail.length > 0) {
-                            vendors = rawDetail.map(d => ({
-                                name: d.vendor_name || d.Vendor_Name || 'Vendor SAP',
-                                docCount: parseNum(d.transaction || 1),
-                                avgMin: parseNum(d.minutes_for_posted_per_invoice || avgMinutes),
-                                slaDays: parseNum(d.sla_full_process || 2.1),
-                                isOverSla: parseNum(d.sla_full_process || 2.1) > 3.0
-                            }));
-                        }
+                if (parsedPost.length === 0) parsedPost = initialPostData;
 
-                        return {
-                            id: item.id || `POST-${idx+1}`,
-                            name,
-                            date,
-                            postedDocs,
-                            avgMinutes,
-                            slaDaysAvg,
-                            complianceRate: item.complianceRate || '92.0%',
-                            vendors: vendors.length > 0 ? vendors : [
-                                { name: 'PT SAP Supply Chain', docCount: postedDocs, avgMin: avgMinutes, slaDays: slaDaysAvg, isOverSla: slaDaysAvg > 3.0 }
-                            ]
-                        };
-                    });
-                }
-
-                return {
-                    parkData: parsedPark.length > 0 ? parsedPark : null,
-                    postData: parsedPost.length > 0 ? parsedPost : null
-                };
+                return { parkData: parsedPark, postData: parsedPost };
             };
 
-            // Dynamic fetch attempt for /data/ap_metrics.json
+            // Fetch and load ap_metrics.json
             useEffect(() => {
-                fetch('/data/ap_metrics.json')
+                fetch('ap_metrics.json')
                     .then(res => {
                         if (res.ok) return res.json();
-                        throw new Error('File ap_metrics.json belum tersedia di server.');
+                        return fetch('/data/ap_metrics.json');
+                    })
+                    .then(res => {
+                        if (res && res.ok) return res.json();
+                        throw new Error('Loading via direct fetch');
                     })
                     .then(json => {
                         const normalized = normalizePowerAutomateData(json);
                         if (normalized.parkData) setParkData(normalized.parkData);
                         if (normalized.postData) setPostData(normalized.postData);
-                        if (json.lastUpdated) setLastUpdated(json.lastUpdated);
+                        if (json.updated_at) {
+                            const dateObj = new Date(json.updated_at);
+                            setLastUpdated(dateObj.toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) + ' WIB');
+                        }
                     })
                     .catch(err => {
-                        console.log('Info Mode Sync Data:', err.message);
+                        console.log('Menggunakan data contoh/fallback standar:', err.message);
                     });
             }, []);
 
-            // Dynamic PIC Staff List extracted from current Data
             const parkStaffList = useMemo(() => {
                 const unique = {};
                 parkData.forEach(d => {
@@ -345,7 +345,6 @@
                 return Object.values(unique);
             }, [parkData]);
 
-            // Dynamic SPV List extracted from current Data
             const postSpvList = useMemo(() => {
                 const unique = {};
                 postData.forEach(d => {
@@ -355,22 +354,20 @@
             }, [postData]);
 
             const filteredParkData = useMemo(() => {
-                let list = parkData.filter(d => d.date >= parkStartDate && d.date <= parkEndDate);
-                if (list.length === 0) list = parkData;
+                let list = parkData;
                 if (selectedParkPic !== 'ALL') {
                     list = list.filter(p => p.id === selectedParkPic || p.name === selectedParkPic);
                 }
                 return list;
-            }, [parkStartDate, parkEndDate, selectedParkPic, parkData]);
+            }, [selectedParkPic, parkData]);
 
             const filteredPostData = useMemo(() => {
-                let list = postData.filter(d => d.date >= postStartDate && d.date <= postEndDate);
-                if (list.length === 0) list = postData;
+                let list = postData;
                 if (selectedPostSpv !== 'ALL') {
                     list = list.filter(p => p.id === selectedPostSpv || p.name === selectedPostSpv);
                 }
                 return list;
-            }, [postStartDate, postEndDate, selectedPostSpv, postData]);
+            }, [selectedPostSpv, postData]);
 
             const parkVendorList = useMemo(() => {
                 const map = {};
@@ -436,14 +433,14 @@
                                     <h1 className="font-bold text-base sm:text-lg leading-tight text-amber-400 flex items-center gap-2">
                                         SUNPRIDE <span className="text-white font-normal">| SAP AP PIC Performance & SLA Analytics</span>
                                     </h1>
-                                    <p className="text-xs text-emerald-400/80">Monitoring Performance Staff (Parked) & SPV (Posted)</p>
+                                    <p className="text-xs text-emerald-400/80">Monitoring Performance Staff (Parked) & SPV (Posted) • Connected to ap_metrics.json</p>
                                 </div>
                             </div>
 
                             <div className="flex items-center space-x-3">
                                 <div className="flex items-center space-x-2 text-xs bg-[#182420] px-3 py-1.5 rounded-lg border border-sunpride-border text-slate-300">
                                     <RefreshCwIcon size={14} className="text-amber-400 animate-spin-slow" />
-                                    <span>Last Sync Data: <strong className="text-amber-400 font-semibold">{lastUpdated}</strong></span>
+                                    <span>Last Sync JSON: <strong className="text-amber-400 font-semibold">{lastUpdated}</strong></span>
                                 </div>
                             </div>
                         </div>
@@ -466,27 +463,9 @@
                                 </div>
 
                                 <div className="flex flex-wrap items-center gap-3">
-                                    <div className="flex items-center space-x-1.5 bg-[#0b1210] px-3 py-1.5 rounded-xl border border-amber-500/30 text-xs">
-                                        <CalendarIcon size={14} className="text-amber-400 shrink-0" />
-                                        <span className="font-semibold text-slate-400">Tgl:</span>
-                                        <input 
-                                            type="date" 
-                                            value={parkStartDate} 
-                                            onChange={(e) => setParkStartDate(e.target.value)}
-                                            className="bg-transparent font-bold text-amber-400 focus:outline-none cursor-pointer text-[11px]"
-                                        />
-                                        <span className="text-slate-500 font-bold">-</span>
-                                        <input 
-                                            type="date" 
-                                            value={parkEndDate} 
-                                            onChange={(e) => setParkEndDate(e.target.value)}
-                                            className="bg-transparent font-bold text-amber-400 focus:outline-none cursor-pointer text-[11px]"
-                                        />
-                                    </div>
-
                                     <div className="flex items-center space-x-2 bg-[#0b1210] p-1.5 px-3 rounded-xl border border-amber-500/30">
                                         <FilterIcon size={14} className="text-amber-400 shrink-0" />
-                                        <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">PIC:</span>
+                                        <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">PIC Staff:</span>
                                         <select 
                                             value={selectedParkPic} 
                                             onChange={(e) => setSelectedParkPic(e.target.value)}
@@ -563,9 +542,9 @@
                                         <div className="flex items-center justify-between mb-3">
                                             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                                                 <TruckIcon size={14} className="text-amber-400" />
-                                                <span>Vendor Diproses Periode Ini (Park)</span>
+                                                <span>Vendor Detail Entry (ap_metrics.json)</span>
                                             </h3>
-                                            <span className="text-[10px] text-slate-500">Penyebab Delay Staff</span>
+                                            <span className="text-[10px] text-slate-500">Penyebab Delay Park</span>
                                         </div>
                                         <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                                             {parkVendorList.map((vendor, idx) => (
@@ -576,7 +555,7 @@
                                                             {vendor.isOverSla && <AlertCircleIcon size={12} className="text-rose-400 shrink-0" />}
                                                         </p>
                                                         <p className="text-[10px] text-slate-400 mt-0.5">
-                                                            Vol: <span className="text-amber-400 font-semibold">{vendor.docCount} Invoices</span> • Min/Doc: <span className="text-slate-200 font-mono">{vendor.avgMin} min</span>
+                                                            Transaksi: <span className="text-amber-400 font-semibold">{vendor.docCount} Record</span>
                                                         </p>
                                                     </div>
                                                     <div className="text-right font-mono">
@@ -589,7 +568,7 @@
                                         </div>
                                     </div>
                                     <p className="text-[10px] text-slate-500 italic mt-2 border-t border-sunpride-border/80 pt-2">
-                                        *Vendor berlabel merah melebihi SLA Parked 1 Hari dan memicu perlambatan performance.
+                                        *Berdasarkan array `detail_entry` dan `table_parked` dalam `ap_metrics.json`.
                                     </p>
                                 </div>
                             </div>
@@ -625,11 +604,6 @@
                                     barLabel="Volume Parked"
                                     activeFilterName={selectedParkPic}
                                 />
-
-                                <div className="flex justify-between items-center text-[10px] text-slate-400 pt-2 border-t border-sunpride-border/60">
-                                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-amber-400 rounded-sm"></span> Volume Invoices (Qty)</span>
-                                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-0.5 bg-amber-400 border border-dashed border-amber-400"></span> Avg Minutes / Invoice</span>
-                                </div>
                             </div>
                         </section>
 
@@ -649,24 +623,6 @@
                                 </div>
 
                                 <div className="flex flex-wrap items-center gap-3">
-                                    <div className="flex items-center space-x-1.5 bg-[#0b1210] px-3 py-1.5 rounded-xl border border-emerald-500/30 text-xs">
-                                        <CalendarIcon size={14} className="text-emerald-400 shrink-0" />
-                                        <span className="font-semibold text-slate-400">Tgl:</span>
-                                        <input 
-                                            type="date" 
-                                            value={postStartDate} 
-                                            onChange={(e) => setPostStartDate(e.target.value)}
-                                            className="bg-transparent font-bold text-emerald-400 focus:outline-none cursor-pointer text-[11px]"
-                                        />
-                                        <span className="text-slate-500 font-bold">-</span>
-                                        <input 
-                                            type="date" 
-                                            value={postEndDate} 
-                                            onChange={(e) => setPostEndDate(e.target.value)}
-                                            className="bg-transparent font-bold text-emerald-400 focus:outline-none cursor-pointer text-[11px]"
-                                        />
-                                    </div>
-
                                     <div className="flex items-center space-x-2 bg-[#0b1210] p-1.5 px-3 rounded-xl border border-emerald-500/30">
                                         <FilterIcon size={14} className="text-emerald-400 shrink-0" />
                                         <span className="text-xs font-semibold uppercase tracking-wider text-slate-400">SPV:</span>
@@ -746,7 +702,7 @@
                                         <div className="flex items-center justify-between mb-3">
                                             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
                                                 <TruckIcon size={14} className="text-emerald-400" />
-                                                <span>Vendor Diproses Periode Ini (Post)</span>
+                                                <span>Vendor Full Process (ap_metrics.json)</span>
                                             </h3>
                                             <span className="text-[10px] text-slate-500">Penyebab Delay SPV</span>
                                         </div>
@@ -759,7 +715,7 @@
                                                             {vendor.isOverSla && <AlertCircleIcon size={12} className="text-rose-400 shrink-0" />}
                                                         </p>
                                                         <p className="text-[10px] text-slate-400 mt-0.5">
-                                                            Vol: <span className="text-emerald-400 font-semibold">{vendor.docCount} Invoices</span> • Min/Doc: <span className="text-slate-200 font-mono">{vendor.avgMin} min</span>
+                                                            SLA Full Process: <span className="text-emerald-400 font-semibold">{vendor.avgSlaDays} Hari</span>
                                                         </p>
                                                     </div>
                                                     <div className="text-right font-mono">
@@ -772,7 +728,7 @@
                                         </div>
                                     </div>
                                     <p className="text-[10px] text-slate-500 italic mt-2 border-t border-sunpride-border/80 pt-2">
-                                        *Vendor berlabel merah melebihi SLA Posted 3 Hari dan butuh eskalasi SPV.
+                                        *Berdasarkan kolom `sla_full_process` dari `ap_metrics.json`.
                                     </p>
                                 </div>
                             </div>
@@ -808,11 +764,6 @@
                                     barLabel="Volume Posted"
                                     activeFilterName={selectedPostSpv}
                                 />
-
-                                <div className="flex justify-between items-center text-[10px] text-slate-400 pt-2 border-t border-sunpride-border/60">
-                                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 bg-emerald-500 rounded-sm"></span> Volume Invoices (Qty)</span>
-                                    <span className="flex items-center gap-1.5"><span className="w-2.5 h-0.5 bg-emerald-400 border border-dashed border-emerald-400"></span> Avg Minutes / Invoice</span>
-                                </div>
                             </div>
                         </section>
                     </main>
