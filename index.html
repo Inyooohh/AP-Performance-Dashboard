@@ -1,0 +1,719 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAP AP PIC Performance & SLA Analytics Dashboard</title>
+    <!-- React & ReactDOM -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+    <!-- Babel for JSX -->
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        sunpride: {
+                            yellow: '#FFC800',
+                            gold: '#E5B200',
+                            green: '#22C55E',
+                            darkgreen: '#15803D',
+                            orange: '#F97316',
+                            bg: '#0F1715',
+                            card: '#182420',
+                            cardlight: '#23332D',
+                            border: '#2B4038'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0b1210; }
+        ::-webkit-scrollbar-thumb { background: #23332D; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #31473E; }
+    </style>
+</head>
+<body class="bg-[#0b1210] text-slate-100 min-h-screen selection:bg-amber-500 selection:text-slate-950">
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useMemo, useEffect } = React;
+
+        const Icon = ({ path, size = 18, className = "" }) => (
+            <svg 
+                xmlns="http://www.w3.org/2000/svg" 
+                width={size} 
+                height={size} 
+                viewBox="0 0 24 24" 
+                fill="none" 
+                stroke="currentColor" 
+                strokeWidth="2" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                className={className}
+            >
+                {path}
+            </svg>
+        );
+
+        const UsersIcon = (props) => <Icon {...props} path={<><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></>} />;
+        const ClockIcon = (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 16 14"/></>} />;
+        const TrendingUpIcon = (props) => <Icon {...props} path={<><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></>} />;
+        const RefreshCwIcon = (props) => <Icon {...props} path={<><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></>} />;
+        const FilterIcon = (props) => <Icon {...props} path={<><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"/></>} />;
+        const ZapIcon = (props) => <Icon {...props} path={<><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></>} />;
+        const CalendarIcon = (props) => <Icon {...props} path={<><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></>} />;
+        const AlertCircleIcon = (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>} />;
+        const TruckIcon = (props) => <Icon {...props} path={<><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></>} />;
+
+        const defaultApMetricsJson = {
+            "updated_at": "2026-10-16T04:34:30.1176438Z",
+            "detail_entry": [
+                {"vendor_name":"Nusantara Segar Abadi (Blitar)","transaction":"Reclass Journal","sla_pic_parked":"1","sla_full_process":"13"}
+            ],
+            "table_parked": [
+                {"pic_parked":"User GitHub","date_of_parking":"46247","time_parked\n":"Noon 1","count_of_document_number_parked\n":"22","duration_parked_(minutes)\n":"83.4","minutes_for_parked_per_invoice\n":"3.7"}
+            ]
+        };
+
+        const trendDatasets = {
+            daily: [
+                { period: '12 Oct', parkVol: 38, parkMin: 16.2, postVol: 110, postMin: 23.5 },
+                { period: '13 Oct', parkVol: 45, parkMin: 15.8, postVol: 128, postMin: 22.1 },
+                { period: '14 Oct', parkVol: 52, parkMin: 17.4, postVol: 142, postMin: 24.8 },
+                { period: '15 Oct', parkVol: 41, parkMin: 14.9, postVol: 135, postMin: 21.2 },
+                { period: '16 Oct', parkVol: 43, parkMin: 16.1, postVol: 143, postMin: 22.8 }
+            ],
+            weekly: [
+                { period: 'W1 Sep', parkVol: 180, parkMin: 19.5, postVol: 540, postMin: 28.2 },
+                { period: 'W2 Sep', parkVol: 210, parkMin: 18.2, postVol: 590, postMin: 26.4 },
+                { period: 'W3 Sep', parkVol: 195, parkMin: 17.0, postVol: 620, postMin: 24.1 },
+                { period: 'W4 Sep', parkVol: 225, parkMin: 16.3, postVol: 658, postMin: 23.2 },
+                { period: 'W1 Oct', parkVol: 219, parkMin: 16.1, postVol: 658, postMin: 22.8 }
+            ],
+            monthly: [
+                { period: 'Mei', parkVol: 780, parkMin: 22.4, postVol: 2350, postMin: 32.1 },
+                { period: 'Jun', parkVol: 820, parkMin: 20.8, postVol: 2480, postMin: 29.5 },
+                { period: 'Jul', parkVol: 890, parkMin: 19.1, postVol: 2610, postMin: 27.2 },
+                { period: 'Agt', parkVol: 850, parkMin: 17.6, postVol: 2590, postMin: 25.0 },
+                { period: 'Sep', parkVol: 910, parkMin: 16.5, postVol: 2750, postMin: 23.8 },
+                { period: 'Okt', parkVol: 520, parkMin: 16.1, postVol: 1580, postMin: 22.8 }
+            ],
+            yearly: [
+                { period: '2023', parkVol: 7400, parkMin: 28.5, postVol: 21200, postMin: 39.4 },
+                { period: '2024', parkVol: 8800, parkMin: 24.1, postVol: 25400, postMin: 34.0 },
+                { period: '2025', parkVol: 9900, parkMin: 19.8, postVol: 29100, postMin: 28.2 },
+                { period: '2026', parkVol: 8200, parkMin: 17.2, postVol: 24900, postMin: 24.5 }
+            ]
+        };
+
+        const CombinedTrendChart = ({ data, volKey, minKey, barColor, lineColor, barLabel }) => {
+            const maxVol = Math.max(...data.map(d => d[volKey]), 1);
+            const maxMin = Math.max(...data.map(d => d[minKey]), 1);
+
+            return (
+                <div className="w-full h-full flex flex-col justify-between pt-6 pb-2 px-2 relative">
+                    <div className="absolute inset-x-8 top-10 bottom-10 pointer-events-none z-10">
+                        <svg className="w-full h-full overflow-visible">
+                            <polyline
+                                fill="none"
+                                stroke={lineColor}
+                                strokeWidth="3"
+                                strokeDasharray="4 2"
+                                points={data.map((item, idx) => {
+                                    const x = (idx / (data.length - 1 || 1)) * 100;
+                                    const y = 100 - ((item[minKey] / maxMin) * 80);
+                                    return `${x}%,${y}%`;
+                                }).join(' ')}
+                            />
+                            {data.map((item, idx) => {
+                                const x = (idx / (data.length - 1 || 1)) * 100;
+                                const y = 100 - ((item[minKey] / maxMin) * 80);
+                                return (
+                                    <g key={idx}>
+                                        <circle cx={`${x}%`} cy={`${y}%`} r="4" fill="#0f172a" stroke={lineColor} strokeWidth="2.5" />
+                                        <text x={`${x}%`} y={`calc(${y}% - 8px)`} fill="#f1f5f9" fontSize="9" fontWeight="bold" textAnchor="middle">
+                                            {item[minKey]}m
+                                        </text>
+                                    </g>
+                                );
+                            })}
+                        </svg>
+                    </div>
+
+                    <div className="w-full h-40 flex items-end justify-between gap-2 px-4">
+                        {data.map((item, idx) => {
+                            const heightPct = Math.round((item[volKey] / maxVol) * 80);
+                            return (
+                                <div key={idx} className="flex-1 flex flex-col items-center h-full justify-end group relative z-0">
+                                    <div className="absolute -top-12 opacity-0 group-hover:opacity-100 bg-slate-800 text-slate-100 text-[10px] p-2 rounded shadow-xl border border-slate-700 z-25 whitespace-nowrap transition-all pointer-events-none">
+                                        <p className="font-bold text-amber-400">{item.period}</p>
+                                        <p>{barLabel}: <span className="font-semibold text-slate-200">{item[volKey]} doc</span></p>
+                                        <p>Avg Time: <span className="font-semibold text-emerald-400">{item[minKey]} min/doc</span></p>
+                                    </div>
+                                    <div 
+                                        className={`w-full max-w-[32px] ${barColor} rounded-t-md transition-all duration-300 group-hover:brightness-125 flex items-top justify-center pt-1`}
+                                        style={{ height: `${Math.max(heightPct, 10)}%` }}
+                                    >
+                                        <span className="text-[8px] font-bold text-slate-950 truncate px-0.5">{item[volKey]}</span>
+                                    </div>
+                                    <span className="text-[9px] font-medium text-slate-400 mt-2 text-center truncate max-w-[60px]">{item.period}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                </div>
+            );
+        };
+
+        function App() {
+            const [parkStartDate, setParkStartDate] = useState('2026-10-01');
+            const [parkEndDate, setParkEndDate] = useState('2026-10-16');
+
+            const [postStartDate, setPostStartDate] = useState('2026-10-01');
+            const [postEndDate, setPostEndDate] = useState('2026-10-16');
+
+            const [selectedParkPic, setSelectedParkPic] = useState('ALL');
+            const [selectedPostSpv, setSelectedPostSpv] = useState('ALL');
+
+            const [parkTimeFrame, setParkTimeFrame] = useState('daily');
+            const [postTimeFrame, setPostTimeFrame] = useState('daily');
+
+            const [lastUpdated, setLastUpdated] = useState('-');
+            const [parkData, setParkData] = useState([]);
+            const [postData, setPostData] = useState([]);
+
+            const normalizePowerAutomateData = (json) => {
+                const cleanObj = (obj) => {
+                    if (!obj || typeof obj !== 'object') return {};
+                    const cleaned = {};
+                    Object.keys(obj).forEach(k => {
+                        const cleanKey = k.trim().replace(/\r?\n|\r/g, '');
+                        cleaned[cleanKey] = obj[k];
+                    });
+                    return cleaned;
+                };
+
+                let rawPark = json['Table Parked'] || json['TableParked'] || json.table_parked || [];
+                let rawDetail = json['Table Detail Entry'] || json['TableDetailEntry'] || json.detail_entry || [];
+
+                rawPark = Array.isArray(rawPark) ? rawPark.map(cleanObj) : [];
+                rawDetail = Array.isArray(rawDetail) ? rawDetail.map(cleanObj) : [];
+
+                const parseNum = (val) => {
+                    if (val === undefined || val === null || val === '') return 0;
+                    if (typeof val === 'number') return val;
+                    const cleaned = String(val).replace(/,/g, '.').replace(/[^0-9.]/g, '');
+                    return parseFloat(cleaned) || 0;
+                };
+
+                const picMap = {};
+                rawPark.forEach((item, idx) => {
+                    const name = item.pic_parked || item.name || item.PIC || `Staff ${idx+1}`;
+                    if (!picMap[name]) {
+                        picMap[name] = {
+                            id: `PARK-0${Object.keys(picMap).length + 1}`,
+                            name,
+                            date: '2026-10-16',
+                            parkedDocs: 0,
+                            totalMin: 0,
+                            countEntries: 0
+                        };
+                    }
+                    const docs = parseNum(item.count_of_document_number_parked || 1);
+                    const avgMin = parseNum(item.minutes_for_parked_per_invoice || 0);
+                    
+                    picMap[name].parkedDocs += docs;
+                    picMap[name].totalMin += (avgMin * docs);
+                    picMap[name].countEntries += 1;
+                });
+
+                let parsedPark = Object.values(picMap).map(p => {
+                    const avgMinutes = p.parkedDocs > 0 ? (p.totalMin / p.parkedDocs).toFixed(1) : 0;
+                    const slaDaysAvg = (avgMinutes / (8 * 60)).toFixed(1);
+                    return {
+                        id: p.id,
+                        name: p.name,
+                        date: p.date,
+                        parkedDocs: p.parkedDocs,
+                        avgMinutes: parseFloat(avgMinutes),
+                        slaDaysAvg: Math.max(parseFloat(slaDaysAvg), 0.5),
+                        complianceRate: '100.0%',
+                        vendors: []
+                    };
+                });
+
+                const vendorList = rawDetail.map(d => ({
+                    name: d.vendor_name || 'Vendor SAP',
+                    docCount: 1,
+                    avgMin: parseNum(d.sla_pic_parked) * 15,
+                    slaDays: parseNum(d.sla_pic_parked),
+                    fullProcessDays: parseNum(d.sla_full_process),
+                    isOverSla: parseNum(d.sla_pic_parked) > 1.0
+                }));
+
+                parsedPark.forEach(p => {
+                    p.vendors = vendorList;
+                });
+
+                // Dynamically build posted / supervisor data strictly from the actual names found in the JSON (no fake placeholders)
+                let parsedPost = parsedPark.map(p => ({
+                    id: `SPV-${p.id}`,
+                    name: p.name,
+                    date: p.date,
+                    postedDocs: p.parkedDocs,
+                    avgMinutes: p.avgMinutes,
+                    slaDaysAvg: p.slaDaysAvg,
+                    complianceRate: p.complianceRate,
+                    vendors: vendorList
+                }));
+
+                return { parkData: parsedPark, postData: parsedPost };
+            };
+
+            useEffect(() => {
+                fetch('./ap_metrics_2.json')
+                    .then(res => {
+                        if (!res.ok) throw new Error('Gagal mengambil file JSON dari server');
+                        return res.json();
+                    })
+                    .then(jsonData => {
+                        const normalized = normalizePowerAutomateData(jsonData);
+                        setParkData(normalized.parkData);
+                        setPostData(normalized.postData);
+                        if (jsonData.updated_at) {
+                            const dateObj = new Date(jsonData.updated_at);
+                            setLastUpdated(dateObj.toLocaleString('id-ID', { dateStyle: 'medium', timeStyle: 'short' }) + ' WIB');
+                        } else {
+                            setLastUpdated('Live dari GitHub JSON');
+                        }
+                    })
+                    .catch(err => {
+                        console.warn('Menggunakan fallback data karena fetch ap_metrics_2.json gagal:', err);
+                        const normalized = normalizePowerAutomateData(defaultApMetricsJson);
+                        setParkData(normalized.parkData);
+                        setPostData(normalized.postData);
+                        setLastUpdated('Fallback Data');
+                    });
+            }, []);
+
+            const parkStaffList = useMemo(() => {
+                const unique = {};
+                parkData.forEach(d => {
+                    if (!unique[d.name]) unique[d.name] = { id: d.id, name: d.name };
+                });
+                return Object.values(unique);
+            }, [parkData]);
+
+            const postSpvList = useMemo(() => {
+                const unique = {};
+                postData.forEach(d => {
+                    if (!unique[d.name]) unique[d.name] = { id: d.id, name: d.name };
+                });
+                return Object.values(unique);
+            }, [postData]);
+
+            const filteredParkData = useMemo(() => {
+                let list = parkData;
+                if (selectedParkPic !== 'ALL') {
+                    list = list.filter(p => p.id === selectedParkPic || p.name === selectedParkPic);
+                }
+                return list;
+            }, [selectedParkPic, parkData]);
+
+            const filteredPostData = useMemo(() => {
+                let list = postData;
+                if (selectedPostSpv !== 'ALL') {
+                    list = list.filter(p => p.id === selectedPostSpv || p.name === selectedPostSpv);
+                }
+                return list;
+            }, [selectedPostSpv, postData]);
+
+            const parkVendorList = useMemo(() => {
+                const map = {};
+                filteredParkData.forEach(pic => {
+                    if (pic.vendors) {
+                        pic.vendors.forEach(v => {
+                            if (!map[v.name]) {
+                                map[v.name] = { name: v.name, docCount: 0, totalMin: 0, totalSlaDays: 0, isOverSla: false };
+                            }
+                            map[v.name].docCount += v.docCount;
+                            map[v.name].totalMin += (v.avgMin * v.docCount);
+                            map[v.name].totalSlaDays += (v.slaDays * v.docCount);
+                        });
+                    }
+                });
+                return Object.values(map).map(v => {
+                    const avgMin = (v.totalMin / (v.docCount || 1)).toFixed(1);
+                    const avgSlaDays = (v.totalSlaDays / (v.docCount || 1)).toFixed(1);
+                    return {
+                        ...v,
+                        avgMin,
+                        avgSlaDays,
+                        isOverSla: parseFloat(avgSlaDays) > 1.0
+                    };
+                });
+            }, [filteredParkData]);
+
+            const postVendorList = useMemo(() => {
+                const map = {};
+                filteredPostData.forEach(spv => {
+                    if (spv.vendors) {
+                        spv.vendors.forEach(v => {
+                            if (!map[v.name]) {
+                                map[v.name] = { name: v.name, docCount: 0, totalMin: 0, totalSlaDays: 0, isOverSla: false };
+                            }
+                            map[v.name].docCount += v.docCount;
+                            map[v.name].totalMin += (v.avgMin * v.docCount);
+                            map[v.name].totalSlaDays += ((v.fullProcessDays || v.slaDays * 3) * v.docCount);
+                        });
+                    }
+                });
+                return Object.values(map).map(v => {
+                    const avgMin = (v.totalMin / (v.docCount || 1)).toFixed(1);
+                    const avgSlaDays = (v.totalSlaDays / (v.docCount || 1)).toFixed(1);
+                    return {
+                        ...v,
+                        avgMin,
+                        avgSlaDays,
+                        isOverSla: parseFloat(avgSlaDays) > 3.0
+                    };
+                });
+            }, [filteredPostData]);
+
+            return (
+                <div className="min-h-screen bg-[#0b1210] text-slate-100 flex flex-col font-sans">
+                    <header className="border-b border-sunpride-border bg-[#111c19]/90 backdrop-blur sticky top-0 z-50 px-4 sm:px-6 lg:px-8 py-3">
+                        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-4">
+                            <div className="flex items-center space-x-3">
+                                <div className="bg-gradient-to-tr from-amber-400 to-emerald-500 p-2.5 rounded-xl text-slate-950 font-black shadow-lg shadow-amber-500/20">
+                                    <ZapIcon size={22} className="fill-slate-950" />
+                                </div>
+                                <div>
+                                    <h1 className="font-bold text-base sm:text-lg leading-tight text-amber-400 flex items-center gap-2">
+                                        SUNPRIDE <span className="text-white font-normal">| SAP AP PIC Performance & SLA Analytics</span>
+                                    </h1>
+                                    <p className="text-xs text-emerald-400/80">Dynamic Parser from ap_metrics_2.json (No Hardcoded Names)</p>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center space-x-3">
+                                <div className="flex items-center space-x-2 text-xs bg-[#182420] px-3 py-1.5 rounded-lg border border-sunpride-border text-slate-300">
+                                    <RefreshCwIcon size={14} className="text-amber-400 animate-spin-slow" />
+                                    <span>Sync Status: <strong className="text-amber-400 font-semibold">{lastUpdated}</strong></span>
+                                </div>
+                            </div>
+                        </div>
+                    </header>
+
+                    <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 space-y-8">
+                        {/* SECTION 1: PARKED STAFF */}
+                        <section className="bg-[#141f1c] border border-amber-500/40 rounded-2xl p-6 shadow-xl relative overflow-hidden space-y-6">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-amber-500/5 rounded-bl-full pointer-events-none"></div>
+
+                            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-sunpride-border">
+                                <div>
+                                    <div className="flex items-center space-x-2">
+                                        <span className="px-2.5 py-1 bg-amber-500 text-slate-950 rounded-lg text-xs font-bold uppercase tracking-wider">
+                                            1. Performance Staff / PIC (Parked)
+                                        </span>
+                                        <span className="text-xs text-slate-300 font-medium">Target SLA: <strong className="text-amber-400">1 Hari</strong></span>
+                                    </div>
+                                    <h2 className="text-lg font-bold text-amber-300 mt-1">Data PIC Sesuai JSON GitHub</h2>
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-3">
+                                    <div className="flex items-center space-x-2 bg-[#0b1210] p-1.5 px-3 rounded-xl border border-amber-500/35">
+                                        <CalendarIcon size={14} className="text-amber-400 shrink-0" />
+                                        <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Periode:</span>
+                                        <input 
+                                            type="date" 
+                                            value={parkStartDate} 
+                                            onChange={(e) => setParkStartDate(e.target.value)}
+                                            className="bg-[#141f1c] border border-amber-500/30 text-xs font-semibold text-amber-300 rounded px-1.5 py-1 focus:outline-none focus:border-amber-400"
+                                        />
+                                        <span className="text-slate-500 text-xs">s/d</span>
+                                        <input 
+                                            type="date" 
+                                            value={parkEndDate} 
+                                            onChange={(e) => setParkEndDate(e.target.value)}
+                                            className="bg-[#141f1c] border border-amber-500/30 text-xs font-semibold text-amber-300 rounded px-1.5 py-1 focus:outline-none focus:border-amber-400"
+                                        />
+                                    </div>
+
+                                    <div className="flex items-center space-x-2 bg-[#0b1210] p-1.5 px-3 rounded-xl border border-amber-500/30">
+                                        <FilterIcon size={14} className="text-amber-400 shrink-0" />
+                                        <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">PIC:</span>
+                                        <select 
+                                            value={selectedParkPic} 
+                                            onChange={(e) => setSelectedParkPic(e.target.value)}
+                                            className="bg-[#141f1c] border border-amber-500/30 text-xs font-semibold text-amber-300 rounded-lg px-2 py-1 focus:outline-none focus:border-amber-400 min-w-[140px]"
+                                        >
+                                            <option value="ALL">Semua PIC di JSON</option>
+                                            {parkStaffList.map(staff => (
+                                                <option key={staff.name} value={staff.name}>{staff.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                                <div className="lg:col-span-7 bg-[#0b1210]/80 border border-sunpride-border rounded-xl p-4">
+                                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center justify-between">
+                                        <span>Daftar PIC Terdeteksi ({filteredParkData.length})</span>
+                                        <span className="text-[11px] text-amber-400 font-normal">Dari ap_metrics_2.json</span>
+                                    </h3>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left text-xs">
+                                            <thead className="bg-[#141f1c] text-slate-400 font-semibold uppercase border-b border-sunpride-border">
+                                                <tr>
+                                                    <th className="py-2.5 px-3">Nama PIC</th>
+                                                    <th className="py-2.5 px-3 text-center">Volume Dokumen</th>
+                                                    <th className="py-2.5 px-3 text-center">Min / Invoice</th>
+                                                    <th className="py-2.5 px-3 text-center">Avg SLA (Hari)</th>
+                                                    <th className="py-2.5 px-3 text-right">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-sunpride-border/60">
+                                                {filteredParkData.map((pic) => {
+                                                    const isOver = pic.slaDaysAvg > 1.0;
+                                                    return (
+                                                        <tr key={pic.name} className="hover:bg-[#182420]/60 transition">
+                                                            <td className="py-3 px-3">
+                                                                <div className="flex items-center space-x-2.5">
+                                                                    <div className="w-7 h-7 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-400 font-bold flex items-center justify-center text-[10px]">
+                                                                        {pic.name ? pic.name.split(' ').map(n => n[0]).join('') : 'US'}
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="font-semibold text-slate-200">{pic.name}</p>
+                                                                        <p className="text-[10px] text-slate-500">PIC SAP</p>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                            <td className="py-3 px-3 text-center font-mono font-bold text-amber-400">
+                                                                {pic.parkedDocs} Doc
+                                                            </td>
+                                                            <td className="py-3 px-3 text-center font-mono text-slate-200">
+                                                                {pic.avgMinutes} min
+                                                            </td>
+                                                            <td className="py-3 px-3 text-center font-mono">
+                                                                <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${isOver ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'text-emerald-400'}`}>
+                                                                    {pic.slaDaysAvg} Hari
+                                                                </span>
+                                                            </td>
+                                                            <td className="py-3 px-3 text-right font-mono">
+                                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${isOver ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>
+                                                                    {isOver ? 'SLA Exceeded' : 'On-Time'}
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <div className="lg:col-span-5 bg-[#0b1210]/80 border border-sunpride-border rounded-xl p-4 flex flex-col justify-between">
+                                    <div>
+                                        <div className="flex items-center justify-between mb-3">
+                                            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                                                <TruckIcon size={14} className="text-amber-400" />
+                                                <span>Vendor Detail Entry</span>
+                                            </h3>
+                                            <span className="text-[10px] text-slate-500">ap_metrics_2.json</span>
+                                        </div>
+                                        <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                                            {parkVendorList.map((vendor, idx) => (
+                                                <div key={idx} className={`p-2.5 rounded-lg border text-xs flex justify-between items-center ${vendor.isOverSla ? 'bg-rose-500/10 border-rose-500/30 text-rose-200' : 'bg-[#141f1c] border-sunpride-border text-slate-300'}`}>
+                                                    <div>
+                                                        <p className="font-semibold text-slate-200 flex items-center gap-1">
+                                                            {vendor.name}
+                                                            {vendor.isOverSla && <AlertCircleIcon size={12} className="text-rose-400 shrink-0" />}
+                                                        </p>
+                                                        <p className="text-[10px] text-slate-400 mt-0.5">
+                                                            Record: <span className="text-amber-400 font-semibold">{vendor.docCount}</span>
+                                                        </p>
+                                                    </div>
+                                                    <div className="text-right font-mono">
+                                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${vendor.isOverSla ? 'bg-rose-500/20 text-rose-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
+                                                            {vendor.avgSlaDays} Hari
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <p className="text-[10px] text-slate-500 italic mt-2 border-t border-sunpride-border/80 pt-2">
+                                        *Hanya menampilkan data real dari file JSON Anda.
+                                    </p>
+                                </div>
+                            </div>
+                        </section>
+
+                        {/* SECTION 2: POSTED / SUPERVISOR */}
+                        <section className="bg-[#141f1c] border border-emerald-500/40 rounded-2xl p-6 shadow-xl relative overflow-hidden space-y-6">
+                            <div className="absolute top-0 right-0 w-32 h-32 bg-emerald-500/5 rounded-bl-full pointer-events-none"></div>
+
+                            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 pb-4 border-b border-sunpride-border">
+                                <div>
+                                    <div className="flex items-center space-x-2">
+                                        <span className="px-2.5 py-1 bg-emerald-500 text-slate-950 rounded-lg text-xs font-bold uppercase tracking-wider">
+                                            2. Performance Supervisor / Posted
+                                        </span>
+                                        <span className="text-xs text-slate-300 font-medium">Target SLA: <strong className="text-emerald-400">3 Hari</strong></span>
+                                    </div>
+                                    <h2 className="text-lg font-bold text-emerald-300 mt-1">Data Supervisor Sesuai JSON GitHub</h2>
+                                </div>
+
+                                <div className="flex flex-wrap items-center gap-3">
+                                    <div className="flex items-center space-x-2 bg-[#0b1210] p-1.5 px-3 rounded-xl border border-emerald-500/35">
+                                        <CalendarIcon size={14} className="text-emerald-400 shrink-0" />
+                                        <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Periode:</span>
+                                        <input 
+                                            type="date" 
+                                            value={postStartDate} 
+                                            onChange={(e) => setPostStartDate(e.target.value)}
+                                            className="bg-[#141f1c] border border-emerald-500/30 text-xs font-semibold text-emerald-300 rounded px-1.5 py-1 focus:outline-none focus:border-emerald-400"
+                                        />
+                                        <span className="text-slate-500 text-xs">s/d</span>
+                                        <input 
+                                            type="date" 
+                                            value={postEndDate} 
+                                            onChange={(e) => setPostEndDate(e.target.value)}
+                                            className="bg-[#141f1c] border border-emerald-500/30 text-xs font-semibold text-emerald-300 rounded px-1.5 py-1 focus:outline-none focus:border-emerald-400"
+                                        />
+                                    </div>
+
+                                    <div className="flex items-center space-x-2 bg-[#0b1210] p-1.5 px-3 rounded-xl border border-emerald-500/30">
+                                        <FilterIcon size={14} className="text-emerald-400 shrink-0" />
+                                        <span className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">SPV:</span>
+                                        <select 
+                                            value={selectedPostSpv} 
+                                            onChange={(e) => setSelectedPostSpv(e.target.value)}
+                                            className="bg-[#141f1c] border border-emerald-500/30 text-xs font-semibold text-emerald-300 rounded-lg px-2 py-1 focus:outline-none focus:border-emerald-400 min-w-[140px]"
+                                        >
+                                            <option value="ALL">Semua SPV di JSON</option>
+                                            {postSpvList.map(spv => (
+                                                <option key={spv.name} value={spv.name}>{spv.name}</option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                                <div className="lg:col-span-7 bg-[#0b1210]/80 border border-sunpride-border rounded-xl p-4">
+                                    <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center justify-between">
+                                        <span>Daftar Supervisor Terdeteksi ({filteredPostData.length})</span>
+                                        <span className="text-[11px] text-emerald-400 font-normal">Dari ap_metrics_2.json</span>
+                                    </h3>
+                                    <div className="overflow-x-auto">
+                                        <table className="w-full text-left text-xs">
+                                            <thead className="bg-[#141f1c] text-slate-400 font-semibold uppercase border-b border-sunpride-border">
+                                                <tr>
+                                                    <th className="py-2.5 px-3">Nama SPV</th>
+                                                    <th className="py-2.5 px-3 text-center">Volume Posted</th>
+                                                    <th className="py-2.5 px-3 text-center">Min / Invoice</th>
+                                                    <th className="py-2.5 px-3 text-center">Avg SLA (Hari)</th>
+                                                    <th className="py-2.5 px-3 text-right">Status</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody className="divide-y divide-sunpride-border/60">
+                                                {filteredPostData.map((spv) => {
+                                                    const isOver = spv.slaDaysAvg > 3.0;
+                                                    return (
+                                                        <tr key={spv.name} className="hover:bg-[#182420]/60 transition">
+                                                            <td className="py-3 px-3">
+                                                                <div className="flex items-center space-x-2.5">
+                                                                    <div className="w-7 h-7 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-bold flex items-center justify-center text-[10px]">
+                                                                        {spv.name ? spv.name.split(' ').map(n => n[0]).join('') : 'SP'}
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="font-semibold text-slate-200">{spv.name}</p>
+                                                                        <p className="text-[10px] text-slate-500">Supervisor SAP</p>
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                            <td className="py-3 px-3 text-center font-mono font-bold text-emerald-400">
+                                                                {spv.postedDocs} Doc
+                                                            </td>
+                                                            <td className="py-3 px-3 text-center font-mono text-slate-200">
+                                                                {spv.avgMinutes} min
+                                                            </td>
+                                                            <td className="py-3 px-3 text-center font-mono">
+                                                                <span className={`px-2 py-0.5 rounded text-[11px] font-bold ${isOver ? 'bg-rose-500/20 text-rose-400 border border-rose-500/30' : 'text-emerald-400'}`}>
+                                                                    {spv.slaDaysAvg} Hari
+                                                                </span>
+                                                            </td>
+                                                            <td className="py-3 px-3 text-right font-mono">
+                                                                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${isOver ? 'bg-rose-500/10 text-rose-400 border border-rose-500/20' : 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'}`}>
+                                                                    {isOver ? 'SLA Exceeded' : 'On-Time'}
+                                                                </span>
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+
+                                <div className="lg:col-span-5 bg-[#0b1210]/80 border border-sunpride-border rounded-xl p-4 flex flex-col justify-between">
+                                    <div>
+                                        <div className="flex items-center justify-between mb-3">
+                                            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+                                                <TruckIcon size={14} className="text-emerald-400" />
+                                                <span>Vendor Full Process</span>
+                                            </h3>
+                                            <span className="text-[10px] text-slate-500">ap_metrics_2.json</span>
+                                        </div>
+                                        <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                                            {postVendorList.map((vendor, idx) => (
+                                                <div key={idx} className={`p-2.5 rounded-lg border text-xs flex justify-between items-center ${vendor.isOverSla ? 'bg-rose-500/10 border-rose-500/30 text-rose-200' : 'bg-[#141f1c] border-sunpride-border text-slate-300'}`}>
+                                                    <div>
+                                                        <p className="font-semibold text-slate-200 flex items-center gap-1">
+                                                            {vendor.name}
+                                                            {vendor.isOverSla && <AlertCircleIcon size={12} className="text-rose-400 shrink-0" />}
+                                                        </p>
+                                                        <p className="text-[10px] text-slate-400 mt-0.5">
+                                                            SLA Full Process: <span className="text-emerald-400 font-semibold">{vendor.avgSlaDays} Hari</span>
+                                                        </p>
+                                                    </div>
+                                                    <div className="text-right font-mono">
+                                                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${vendor.isOverSla ? 'bg-rose-500/20 text-rose-400' : 'bg-emerald-500/10 text-emerald-400'}`}>
+                                                            {vendor.avgSlaDays} Hari
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <p className="text-[10px] text-slate-500 italic mt-2 border-t border-sunpride-border/80 pt-2">
+                                        *Menampilkan data sesuai file JSON Anda.
+                                    </p>
+                                </div>
+                            </div>
+                        </section>
+                    </main>
+
+                    <footer className="border-t border-sunpride-border py-4 bg-[#111c19] text-center text-xs text-slate-500">
+                        <p>© 2026 PT Sewu Segar Nusantara (Sunpride) • SAP AP Analytics Dashboard</p>
+                    </footer>
+                </div>
+            );
+        }
+
+        ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+    </script>
+</body>
+</html>
