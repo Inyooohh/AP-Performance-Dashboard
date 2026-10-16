@@ -74,17 +74,7 @@
         const AlertCircleIcon = (props) => <Icon {...props} path={<><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></>} />;
         const TruckIcon = (props) => <Icon {...props} path={<><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></>} />;
 
-        const parkStaffList = [
-            { id: 'STAFF-01', name: 'Budi Santoso', role: 'AP Staff Park' },
-            { id: 'STAFF-02', name: 'Siti Rahmawati', role: 'AP Staff Park' },
-            { id: 'STAFF-03', name: 'Ahmad Fauzi', role: 'AP Staff Park' }
-        ];
-
-        const postSpvList = [
-            { id: 'SPV-01', name: 'Dewi Lestari', role: 'AP Supervisor' },
-            { id: 'SPV-02', name: 'Rian Pratama', role: 'AP Supervisor' }
-        ];
-
+        // Fallback Initial Data (If JSON isn't available)
         const initialParkData = [
             { id: 'STAFF-01', name: 'Budi Santoso', date: '2026-10-16', parkedDocs: 42, avgMinutes: 18.5, slaDaysAvg: 0.8, complianceRate: '96.2%', 
               vendors: [
@@ -229,32 +219,146 @@
             const [parkTimeFrame, setParkTimeFrame] = useState('daily');
             const [postTimeFrame, setPostTimeFrame] = useState('daily');
 
-            const [lastUpdated, setLastUpdated] = useState('16 Okt 2026, 10:13 WIB');
+            const [lastUpdated, setLastUpdated] = useState('16 Okt 2026, 11:00 WIB');
             const [parkData, setParkData] = useState(initialParkData);
             const [postData, setPostData] = useState(initialPostData);
+
+            // Dynamic Normalizer function for Power Automate JSON Output
+            const normalizePowerAutomateData = (json) => {
+                let parsedPark = [];
+                let parsedPost = [];
+
+                // 1. Check if json has 'Table Parked' or 'parkData' or direct array
+                const rawPark = json['Table Parked'] || json['TableParked'] || json.parkData || json.parked || (Array.isArray(json) ? json : []);
+                const rawPost = json['Table Posted'] || json['TablePosted'] || json.postData || json.posted || (Array.isArray(json) ? json : []);
+                const rawDetail = json['Table Detail Entry'] || json['TableDetailEntry'] || json.detailData || json.details || [];
+
+                // Helper to parse numerical values SAFELY
+                const parseNum = (val) => {
+                    if (val === undefined || val === null || val === '') return 0;
+                    if (typeof val === 'number') return val;
+                    const cleaned = String(val).replace(/,/g, '.').replace(/[^0-9.]/g, '');
+                    return parseFloat(cleaned) || 0;
+                };
+
+                // Normalize Parked Rows
+                if (Array.isArray(rawPark) && rawPark.length > 0) {
+                    parsedPark = rawPark.map((item, idx) => {
+                        const name = item.pic_parked || item.name || item.PIC_Parked || `Staff ${idx+1}`;
+                        const date = item.date_of_parking || item.date || item.Date_Of_Parking || '2026-10-16';
+                        const parkedDocs = parseNum(item.count_of_document_number_parked || item.parkedDocs || item.Count_Of_Document_Number_Parked || 0);
+                        const avgMinutes = parseNum(item.minutes_for_parked_per_invoice || item.duration_parked_minutes || item.avgMinutes || 0);
+                        const slaDaysAvg = parseNum(item.sla_pic_parked || item.slaDaysAvg || 0.8);
+
+                        // Attach or extract vendors if available in detail
+                        let vendors = item.vendors || [];
+                        if (vendors.length === 0 && rawDetail.length > 0) {
+                            vendors = rawDetail.map(d => ({
+                                name: d.vendor_name || d.Vendor_Name || 'Vendor SAP',
+                                docCount: parseNum(d.transaction || 1),
+                                avgMin: parseNum(d.sla_pic_parked || avgMinutes),
+                                slaDays: parseNum(d.sla_pic_parked || 0.8),
+                                isOverSla: parseNum(d.sla_pic_parked || 0.8) > 1.0
+                            }));
+                        }
+
+                        return {
+                            id: item.id || `PARK-${idx+1}`,
+                            name,
+                            date,
+                            parkedDocs,
+                            avgMinutes,
+                            slaDaysAvg,
+                            complianceRate: item.complianceRate || '95.0%',
+                            vendors: vendors.length > 0 ? vendors : [
+                                { name: 'PT SAP Logistics Direct', docCount: parkedDocs, avgMin: avgMinutes, slaDays: slaDaysAvg, isOverSla: slaDaysAvg > 1.0 }
+                            ]
+                        };
+                    });
+                }
+
+                // Normalize Posted Rows
+                if (Array.isArray(rawPost) && rawPost.length > 0) {
+                    parsedPost = rawPost.map((item, idx) => {
+                        const name = item.pic_post || item.name || item.PIC_Post || `Supervisor ${idx+1}`;
+                        const date = item.entry_date || item.date || item.Entry_Date || '2026-10-16';
+                        const postedDocs = parseNum(item.count_of_document_number_posted || item.postedDocs || item.Count_Of_Document_Number_Posted || 0);
+                        const avgMinutes = parseNum(item.minutes_for_posted_per_invoice || item.duration_posting_minutes || item.avgMinutes || 0);
+                        const slaDaysAvg = parseNum(item.sla_full_process || item.slaDaysAvg || 2.1);
+
+                        let vendors = item.vendors || [];
+                        if (vendors.length === 0 && rawDetail.length > 0) {
+                            vendors = rawDetail.map(d => ({
+                                name: d.vendor_name || d.Vendor_Name || 'Vendor SAP',
+                                docCount: parseNum(d.transaction || 1),
+                                avgMin: parseNum(d.minutes_for_posted_per_invoice || avgMinutes),
+                                slaDays: parseNum(d.sla_full_process || 2.1),
+                                isOverSla: parseNum(d.sla_full_process || 2.1) > 3.0
+                            }));
+                        }
+
+                        return {
+                            id: item.id || `POST-${idx+1}`,
+                            name,
+                            date,
+                            postedDocs,
+                            avgMinutes,
+                            slaDaysAvg,
+                            complianceRate: item.complianceRate || '92.0%',
+                            vendors: vendors.length > 0 ? vendors : [
+                                { name: 'PT SAP Supply Chain', docCount: postedDocs, avgMin: avgMinutes, slaDays: slaDaysAvg, isOverSla: slaDaysAvg > 3.0 }
+                            ]
+                        };
+                    });
+                }
+
+                return {
+                    parkData: parsedPark.length > 0 ? parsedPark : null,
+                    postData: parsedPost.length > 0 ? parsedPost : null
+                };
+            };
 
             // Dynamic fetch attempt for /data/ap_metrics.json
             useEffect(() => {
                 fetch('/data/ap_metrics.json')
                     .then(res => {
                         if (res.ok) return res.json();
-                        throw new Error('JSON file not found, using fallback data.');
+                        throw new Error('File ap_metrics.json belum tersedia di server.');
                     })
                     .then(json => {
-                        if (json.parkData) setParkData(json.parkData);
-                        if (json.postData) setPostData(json.postData);
+                        const normalized = normalizePowerAutomateData(json);
+                        if (normalized.parkData) setParkData(normalized.parkData);
+                        if (normalized.postData) setPostData(normalized.postData);
                         if (json.lastUpdated) setLastUpdated(json.lastUpdated);
                     })
                     .catch(err => {
-                        console.log('Info:', err.message);
+                        console.log('Info Mode Sync Data:', err.message);
                     });
             }, []);
+
+            // Dynamic PIC Staff List extracted from current Data
+            const parkStaffList = useMemo(() => {
+                const unique = {};
+                parkData.forEach(d => {
+                    if (!unique[d.id]) unique[d.id] = { id: d.id, name: d.name };
+                });
+                return Object.values(unique);
+            }, [parkData]);
+
+            // Dynamic SPV List extracted from current Data
+            const postSpvList = useMemo(() => {
+                const unique = {};
+                postData.forEach(d => {
+                    if (!unique[d.id]) unique[d.id] = { id: d.id, name: d.name };
+                });
+                return Object.values(unique);
+            }, [postData]);
 
             const filteredParkData = useMemo(() => {
                 let list = parkData.filter(d => d.date >= parkStartDate && d.date <= parkEndDate);
                 if (list.length === 0) list = parkData;
                 if (selectedParkPic !== 'ALL') {
-                    list = list.filter(p => p.id === selectedParkPic);
+                    list = list.filter(p => p.id === selectedParkPic || p.name === selectedParkPic);
                 }
                 return list;
             }, [parkStartDate, parkEndDate, selectedParkPic, parkData]);
@@ -263,7 +367,7 @@
                 let list = postData.filter(d => d.date >= postStartDate && d.date <= postEndDate);
                 if (list.length === 0) list = postData;
                 if (selectedPostSpv !== 'ALL') {
-                    list = list.filter(p => p.id === selectedPostSpv);
+                    list = list.filter(p => p.id === selectedPostSpv || p.name === selectedPostSpv);
                 }
                 return list;
             }, [postStartDate, postEndDate, selectedPostSpv, postData]);
@@ -271,14 +375,16 @@
             const parkVendorList = useMemo(() => {
                 const map = {};
                 filteredParkData.forEach(pic => {
-                    pic.vendors.forEach(v => {
-                        if (!map[v.name]) {
-                            map[v.name] = { name: v.name, docCount: 0, totalMin: 0, totalSlaDays: 0, isOverSla: false };
-                        }
-                        map[v.name].docCount += v.docCount;
-                        map[v.name].totalMin += (v.avgMin * v.docCount);
-                        map[v.name].totalSlaDays += (v.slaDays * v.docCount);
-                    });
+                    if (pic.vendors) {
+                        pic.vendors.forEach(v => {
+                            if (!map[v.name]) {
+                                map[v.name] = { name: v.name, docCount: 0, totalMin: 0, totalSlaDays: 0, isOverSla: false };
+                            }
+                            map[v.name].docCount += v.docCount;
+                            map[v.name].totalMin += (v.avgMin * v.docCount);
+                            map[v.name].totalSlaDays += (v.slaDays * v.docCount);
+                        });
+                    }
                 });
                 return Object.values(map).map(v => {
                     const avgMin = (v.totalMin / (v.docCount || 1)).toFixed(1);
@@ -295,14 +401,16 @@
             const postVendorList = useMemo(() => {
                 const map = {};
                 filteredPostData.forEach(spv => {
-                    spv.vendors.forEach(v => {
-                        if (!map[v.name]) {
-                            map[v.name] = { name: v.name, docCount: 0, totalMin: 0, totalSlaDays: 0, isOverSla: false };
-                        }
-                        map[v.name].docCount += v.docCount;
-                        map[v.name].totalMin += (v.avgMin * v.docCount);
-                        map[v.name].totalSlaDays += (v.slaDays * v.docCount);
-                    });
+                    if (spv.vendors) {
+                        spv.vendors.forEach(v => {
+                            if (!map[v.name]) {
+                                map[v.name] = { name: v.name, docCount: 0, totalMin: 0, totalSlaDays: 0, isOverSla: false };
+                            }
+                            map[v.name].docCount += v.docCount;
+                            map[v.name].totalMin += (v.avgMin * v.docCount);
+                            map[v.name].totalSlaDays += (v.slaDays * v.docCount);
+                        });
+                    }
                 });
                 return Object.values(map).map(v => {
                     const avgMin = (v.totalMin / (v.docCount || 1)).toFixed(1);
@@ -418,7 +526,7 @@
                                                             <td className="py-3 px-3">
                                                                 <div className="flex items-center space-x-2.5">
                                                                     <div className="w-7 h-7 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-400 font-bold flex items-center justify-center text-[10px]">
-                                                                        {pic.name.split(' ').map(n => n[0]).join('')}
+                                                                        {pic.name ? pic.name.split(' ').map(n => n[0]).join('') : 'ST'}
                                                                     </div>
                                                                     <div>
                                                                         <p className="font-semibold text-slate-200">{pic.name}</p>
@@ -601,7 +709,7 @@
                                                             <td className="py-3 px-3">
                                                                 <div className="flex items-center space-x-2.5">
                                                                     <div className="w-7 h-7 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-400 font-bold flex items-center justify-center text-[10px]">
-                                                                        {spv.name.split(' ').map(n => n[0]).join('')}
+                                                                        {spv.name ? spv.name.split(' ').map(n => n[0]).join('') : 'SP'}
                                                                     </div>
                                                                     <div>
                                                                         <p className="font-semibold text-slate-200">{spv.name}</p>
